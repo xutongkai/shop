@@ -10,12 +10,11 @@
     <el-card v-loading="status">
       <el-row>
         <el-col>
-          <el-button type="primary">添加分类</el-button>
+          <el-button type="primary" @click="addClassify">添加分类</el-button>
         </el-col>
 
         <!-- 表格 -->
         <tree-table
-          
           :data="cateList"
           :columns="columns"
           :selection-type="false"
@@ -54,8 +53,42 @@
         </tree-table>
         <!-- 分页区 -->
       </el-row>
-      <el-pagination background layout="prev, pager, next" :total="sumNum"></el-pagination>
+      <el-pagination
+        background
+        layout="prev, pager, next"
+        :page-size="querInfo.pagesize"
+        :total="sumNum"
+        @current-change="handleSizeChange"
+      ></el-pagination>
     </el-card>
+
+    <!-- 添加分类对话框 -->
+    <el-dialog title="添加分类" :visible.sync="dialogVisible" width="50%">
+      <!-- 添加分类表单 -->
+      <el-form
+        :model="addcate"
+        :rules="addcaterules"
+        ref="addcateref"
+        label-width="100px"
+        class="demo-ruleForm"
+      >
+        <el-form-item label="分类名称" prop="name">
+          <el-input v-model="addcate.name"></el-input>
+        </el-form-item>
+        <el-form-item label="父级分类">
+          <!-- options用来表示数据源 -->
+          <el-cascader
+            v-model="value"
+            :options="parentClass"
+            :props="{ expandTrigger: 'hover' }"
+          ></el-cascader>
+        </el-form-item>
+      </el-form>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="cateCancel">取 消</el-button>
+        <el-button type="primary" @click="cateDefine">确 定</el-button>
+      </span>
+    </el-dialog>
   </div>
 </template>
 
@@ -64,6 +97,22 @@ export default {
   name: "categories",
   data() {
     return {
+      // 父级分类id
+      cat_pid: 0,
+      // 分类名称
+      cat_name: "",
+      // 分类等级  默认添加的是1级分类
+      cat_level: 0,
+      // 表单验证规则
+      addcaterules: {
+        name: [{ required: true, message: "请输入活动名称", trigger: "blur" }]
+      },
+      // 分类表单内容
+      addcate: {
+        name: ""
+      },
+      // 添加分类对话框是否显示
+      dialogVisible: false,
       // 数据列表
       cateList: [],
 
@@ -74,7 +123,7 @@ export default {
       },
 
       // 总数据条数
-      sumNum: 3,
+      sumNum: 30,
 
       //  为table指定列的定义
       columns: [
@@ -98,10 +147,51 @@ export default {
           template: "operate"
         }
       ],
-      status:false
+      status: false,
+      // 父级分类
+      parentClass: [],
+      value:[]
     };
   },
   methods: {
+    // 获取父级分类的数据列表
+    async getPcate() {
+      const { data } = await this.$axios.get("categories", {
+        params: { type: 2 }
+      });
+      console.log(data);
+      if (data.meta.status == 200) {
+        this.parentClass = data.data;
+      }
+    },
+
+    // 添加分类取消
+    cateCancel() {
+      this.dialogVisible = false;
+      this.$refs.addcateref.resetFields();
+    },
+    // 确定添加
+    cateDefine() {
+      let that = this;
+      that.$refs.addcateref.validate(res => {
+        console.log(res);
+        //  that.$axios.
+
+        // this.dialogVisible = false
+        // this.$refs.addcateref.resetFields()
+      });
+    },
+    // 添加分类对话框
+    addClassify() {
+      this.dialogVisible = true;
+      this.getPcate();
+    },
+    // 分页
+    handleSizeChange(pagesize) {
+      console.log(pagesize);
+      this.querInfo.pagenum = pagesize;
+      this.getList();
+    },
     // 删除
     del(id) {
       console.log(id);
@@ -110,16 +200,16 @@ export default {
     edit() {},
     async getList() {
       let that = this;
-      that.status = true
+      that.status = true;
       const { data } = await that.$axios.get("categories", {
         params: this.querInfo
       });
-      that.status = false
+      that.status = false;
       console.log(data);
       if (data.meta.status == 200) {
         // 总条数
         that.sumNum = data.data.total;
-        console.log(that.sumNum)
+        console.log(that.sumNum);
         // 列表
         that.cateList = data.data.result;
       }
@@ -138,5 +228,9 @@ export default {
 }
 .el-col {
   margin-bottom: 20px;
+}
+.el-pagination {
+  margin-top: 20px;
+  text-align: center;
 }
 </style>
